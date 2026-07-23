@@ -17,14 +17,12 @@ jobs:
     steps:
     - uses: actions/checkout@v5
     
-    # 新增：随机延迟 0 到 60 分钟（0 到 3600 秒）
-    - name: Random Delay
+    # 仅在定时触发 (schedule) 时等待 0 - 60 分钟；手动触发时跳过
+    - name: Random Delay (0 - 60 mins)
+      if: github.event_name == 'schedule'
       run: |
-        # 生成 0 到 3600 之间的随机秒数
-        DELAY=$((RANDOM % 3601))
-        MIN=$((DELAY / 60))
-        SEC=$((DELAY % 60))
-        echo "⏳ 随机延迟激活：将在 ${MIN} 分 ${SEC} 秒 (${DELAY}秒) 后开始执行..."
+        DELAY=$((RANDOM % 3600))
+        echo "⏰ 定时任务已触发，随机休眠 $DELAY 秒 (约 $((DELAY / 60)) 分钟) 后开始执行..."
         sleep $DELAY
     
     - name: Setup Node.js
@@ -41,15 +39,12 @@ jobs:
       
     - name: Run Renew Script
       env:
-        # 将 USERS_JSON 配置在 GitHub Repository Secrets 中
-        # 格式: [{"username": "xxx", "password": "xxx"}, ...]
         USERS_JSON: ${{ secrets.USERS_JSON }}
         HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
         SUB_URL: ${{ secrets.SUB_URL }}
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         TG_THREAD_ID: ${{ secrets.TG_THREAD_ID }}
-      # 使用 xvfb-run 模拟有头环境运行
       run: xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" node action_renew.js
 
     - name: Commit Renew Dates
