@@ -2,7 +2,7 @@ name: Katabump Auto Renew
 
 on:
   schedule:
-    # 每天 UTC 0点 (北京时间 8点) 运行
+    # 每天 UTC 0点 (北京时间 8点) 触发
     - cron: '0 0 * * *'
   workflow_dispatch: # 允许手动触发
 
@@ -16,6 +16,18 @@ jobs:
     
     steps:
     - uses: actions/checkout@v5
+
+    # ---------------- 增加随机延迟步骤 ----------------
+    - name: Random Delay (0-60 mins)
+      # 仅在定时触发(schedule)时生效；如果是手动触发(workflow_dispatch)则跳过延时，方便直接测试
+      if: github.event_name == 'schedule'
+      run: |
+        # 生成 0 ~ 3600 秒的随机数
+        DELAY_SECONDS=$(( RANDOM % 3601 ))
+        DELAY_MINUTES=$(( DELAY_SECONDS / 60 ))
+        echo "⏰ 定时触发完成，开始随机等待 $DELAY_MINUTES 分钟 ($DELAY_SECONDS 秒)..."
+        sleep $DELAY_SECONDS
+    # --------------------------------------------------
     
     - name: Setup Node.js
       uses: actions/setup-node@v5
@@ -31,15 +43,12 @@ jobs:
       
     - name: Run Renew Script
       env:
-        # 将 USERS_JSON 配置在 GitHub Repository Secrets 中
-        # 格式: [{"username": "xxx", "password": "xxx"}, ...]
         USERS_JSON: ${{ secrets.USERS_JSON }}
         HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
         SUB_URL: ${{ secrets.SUB_URL }}
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         TG_THREAD_ID: ${{ secrets.TG_THREAD_ID }}
-      # 使用 xvfb-run 模拟有头环境运行
       run: xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" node action_renew.js
 
     - name: Commit Renew Dates
